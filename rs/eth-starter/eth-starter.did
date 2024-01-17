@@ -1,0 +1,76 @@
+type Arg = variant { Upgrade; Init : record {} };
+type CanisterConfig = record {
+  canister_getlogs_topics : vec text;
+  expiry_seconds : nat64;
+  max_response_bytes : nat64;
+  ecdsa_key_name : text;
+  canister_fee : nat64;
+  target_chain_ids : vec nat64;
+  eth_rpc_service_url : text;
+  cycle_cost_of_eth_blocknumber : nat;
+  eth_rpc_canister_id : principal;
+  sample_erc20_address : text;
+  last_synced_block_number : nat64;
+  cycle_cost_of_eth_getlogs : nat;
+  debug_log_level : nat8;
+  sync_interval_secs : nat64;
+};
+type CanisterState = record {
+  next_blocks : vec nat64;
+  tecdsa_signer_address : vec nat8;
+  last_block : nat64;
+  tecdsa_pubkey : vec nat8;
+};
+type EcdsaSignature = record { r : vec nat8; s : vec nat8; v : nat8 };
+type EthRpcError = variant {
+  ServiceUrlHostNotAllowed : text;
+  HttpRequestError : record { code : nat32; message : text };
+  TooFewCycles : text;
+  ServiceUrlParseError;
+  ServiceUrlHostMissing;
+  ProviderNotFound;
+  NoPermission;
+};
+type EventError = record { code : opt nat64; message : text };
+type LogView = record { to : opt nat64; from : opt nat64 };
+type Result = variant { Ok; Err : ReturnError };
+type ReturnError = variant {
+  GenericError;
+  JsonParseError : text;
+  MaxResponseBytesExceeded;
+  MemoryError;
+  TransferError : text;
+  InterCanisterCallError : text;
+  CryptoError;
+  EventLogError : EventError;
+  MaxResponseBytesNotEnoughForBlock : nat64;
+  Unauthorized;
+  EventSeen;
+  OutOfMemory;
+  EthRpcError : EthRpcError;
+  TecdsaSignatureError : text;
+  InputError;
+  Expired;
+};
+type SignRequest = record {
+  to : text;
+  gas : nat;
+  value : nat;
+  max_priority_fee_per_gas : nat;
+  data : opt text;
+  max_fee_per_gas : nat;
+  chain_id : nat;
+  nonce : nat;
+};
+service : (Arg) -> {
+  get_canister_config : () -> (CanisterConfig) query;
+  get_canister_state : () -> (CanisterState) query;
+  get_signature : (nat) -> (opt EcdsaSignature) query;
+  get_tecdsa_signer_address_hex : () -> (text) query;
+  personal_sign : (text) -> (text);
+  set_canister_config : (CanisterConfig) -> (Result);
+  sign_prehash : (text) -> (text);
+  sign_transaction : (SignRequest) -> (text);
+  update_canister_state : () -> (Result);
+  view_debug_log : (LogView) -> (vec text) query;
+}

@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "rs/eth-starter"
+]
+resolver = "2"
+
+[workspace.dependencies]
+async-trait = "0.1.77"
+candid = "0.10.2"
+ciborium = "0.2.0"
+ethabi = "18.0.0"
+ethers-core = "2.0.12"
+ethnum = "1.4.0"
+futures = "0.3.30"
+getrandom = "0.2.10"
+hex = "0.4.3"
+ic-canister-log = "0.2.0"
+ic-cdk = "0.12.1"
+ic-cdk-macros = "0.8.0"
+ic-cdk-timers = "0.6.0"
+ic-ledger-types = "0.9.0"
+ic-stable-structures = "0.6.1"
+icrc-ledger-types = "0.1.5"
+k256 = "0.13.3"
+lazy_static = "1.4.0" 
+num-traits = "0.2.15"
+rustic = "0.1.8"
+rustic-macros = "0.1.6"
+serde = "1.0.187"
+serde_bytes = "0.11.9"
+serde_json = "1.0.105"
+sha2 = "0.10.7"
+sha3 = "0.10.8"
+

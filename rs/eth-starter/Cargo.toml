@@ -1,0 +1,38 @@
+[package]
+name = "eth_starter"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "eth-starter"
+path = "src/main.rs"
+
+[dependencies]
+async-trait.workspace = true
+candid.workspace = true
+ciborium.workspace = true
+ethabi.workspace = true
+ethers-core.workspace = true
+futures.workspace = true
+getrandom = { workspace = true, features = ["custom"] }
+hex.workspace = true
+ic-canister-log.workspace = true
+ic-cdk.workspace = true
+ic-cdk-macros.workspace = true
+ic-cdk-timers.workspace = true
+ic-ledger-types.workspace = true
+ic-stable-structures.workspace = true
+icrc-ledger-types.workspace = true
+k256 = {workspace = true, features = ["ecdsa"]}
+lazy_static.workspace = true
+num-traits.workspace = true
+rustic = { workspace = true, features = ["access", "pausable", "reentrancy", "lifecycle"] }
+rustic-macros.workspace = true
+serde.workspace = true
+serde_bytes.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sha3.workspace = true
+
+[dev-dependencies]
+proptest = "1.2.0"
