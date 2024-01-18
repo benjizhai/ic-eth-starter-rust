@@ -2,10 +2,10 @@
 #![allow(unused_imports)]
 
 use eth_starter::crypto::*;
+use eth_starter::lifecycle::*;
 use eth_starter::memory::*;
 use eth_starter::tecdsa::*;
 use eth_starter::utils::*;
-use ic_cdk::api::management_canister::ecdsa::EcdsaPublicKeyResponse;
 
 use candid::{CandidType, Decode, Encode, Nat, Principal};
 use ethers_core::abi::ethereum_types::{Address, H160, U256, U64};
@@ -15,9 +15,9 @@ use ic_canister_log::{declare_log_buffer, export};
 use ic_cdk::api::call::CallResult;
 use ic_cdk::api::management_canister::ecdsa::{
     ecdsa_public_key, sign_with_ecdsa, EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgument,
-    SignWithEcdsaArgument,
+    EcdsaPublicKeyResponse, SignWithEcdsaArgument,
 };
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
+use ic_cdk_macros::{query, update};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell, StableVec, Storable};
 
 use rustic::access_control::*;
@@ -82,34 +82,6 @@ pub enum ReturnError {
     OutOfMemory,
     MaxResponseBytesExceeded,
     MaxResponseBytesNotEnoughForBlock(u64),
-}
-
-#[derive(CandidType, serde::Deserialize)]
-pub struct InitArg {}
-
-#[derive(CandidType, serde::Deserialize)]
-enum Arg {
-    Init(InitArg),
-    Upgrade,
-}
-
-#[init]
-fn init(arg: Arg) {
-    match arg {
-        Arg::Init(InitArg {}) => {
-            rustic::rustic_init();
-
-            // Insert init code for your canister here
-        }
-        Arg::Upgrade => ic_cdk::trap("upgrade args in init"),
-    }
-}
-
-#[post_upgrade]
-pub fn post_upgrade() {
-    rustic::rustic_post_upgrade(false, false, false);
-
-    // Insert post upgrade code for your canister here
 }
 
 #[query]
@@ -281,7 +253,7 @@ async fn personal_sign(plaintext: String) -> String {
     let (pubkey, signature) =
         pubkey_and_signature(msg_hash.to_vec(), vec![], config.ecdsa_key_name).await;
 
-    EcdsaSignature::from_prehash(&msg_hash, &signature, &pubkey).to_string()
+    EcdsaSignature::from_prehash(&msg_hash, &signature, &pubkey).to_string_compact()
 }
 
 /// Computes a signature for a precomputed hash.
@@ -295,7 +267,7 @@ async fn sign_prehash(prehash: String) -> String {
     let (pubkey, signature) =
         pubkey_and_signature(hash_bytes.to_vec(), vec![], config.ecdsa_key_name).await;
 
-    EcdsaSignature::from_prehash(&hash_bytes, &signature, &pubkey).to_string()
+    EcdsaSignature::from_prehash(&hash_bytes, &signature, &pubkey).to_string_compact()
 }
 
 // async fn eth_rpc_call(

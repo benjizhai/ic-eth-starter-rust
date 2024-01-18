@@ -11,7 +11,7 @@ use std::borrow::Cow;
 pub struct EcdsaSignature {
     pub r: [u8; 32],
     pub s: [u8; 32],
-    pub v: u8,
+    pub v: u64,
 }
 
 impl Storable for EcdsaSignature {
@@ -22,30 +22,30 @@ impl Storable for EcdsaSignature {
         Self {
             r: bytes.try_into().unwrap(),
             s: s.try_into().unwrap(),
-            v: v[0],
+            v: u64::from_le_bytes(v.try_into().unwrap()),
         }
     }
 
     fn to_bytes(&self) -> Cow<[u8]> {
-        let mut bytes = Vec::with_capacity(65);
+        let mut bytes = Vec::with_capacity(72);
         bytes.extend_from_slice(&self.r);
         bytes.extend_from_slice(&self.s);
-        bytes.push(self.v);
+        bytes.extend_from_slice(&self.v.to_le_bytes());
         bytes.into()
     }
 
     const BOUND: Bound = Bound::Bounded {
-        max_size: 65,
-        is_fixed_size: true,
+        max_size: 72,
+        is_fixed_size: false,
     };
 }
 
 impl std::string::ToString for EcdsaSignature {
     fn to_string(&self) -> String {
-        let mut bytes = Vec::with_capacity(65);
+        let mut bytes = Vec::with_capacity(72);
         bytes.extend_from_slice(&self.r);
         bytes.extend_from_slice(&self.s);
-        bytes.push(self.v);
+        bytes.extend_from_slice(&self.v.to_le_bytes());
         hex_encode(&bytes)
     }
 }
@@ -61,7 +61,7 @@ impl EcdsaSignature {
     //     }
     // }
 
-    pub fn from_rsv(r: &[u8], s: &[u8], v: u8) -> Self {
+    pub fn from_rsv(r: &[u8], s: &[u8], v: u64) -> Self {
         Self {
             r: r.try_into().unwrap(),
             s: s.try_into().unwrap(),
@@ -69,7 +69,7 @@ impl EcdsaSignature {
         }
     }
 
-    pub fn from_signature_v(signature: &[u8], v: u8) -> Self {
+    pub fn from_signature_v(signature: &[u8], v: u64) -> Self {
         let mut signature = signature.to_vec();
         let s = signature.split_off(32);
         Self {
@@ -87,8 +87,32 @@ impl EcdsaSignature {
             &Signature::try_from(signature).unwrap(),
         )
         .unwrap();
-        let v = recid.is_y_odd() as u8 + 27;
+        let v = recid.is_y_odd() as u64;
         Self::from_signature_v(signature, v)
+    }
+
+    // normalize_v normalizes the v value to be 0 or 1.
+    pub fn normalize_v(&mut self) {
+        self.v = self.v % 2;
+    }
+
+    // expands the v value according to EIP-155.
+    pub fn expand_v(&mut self, chain_id: u64, eip155: bool) {
+        assert!(chain_id <= 4503599627370476, "chain_id out of range"); // https://github.com/ethereum/EIPs/issues/2294#issuecomment-1297145918
+        if eip155 {
+            self.v += chain_id * 2 + 35;
+        } else {
+            self.v += 27;
+        }
+    }
+
+    /// Converts to a compact string with 1 byte v value.
+    pub fn to_string_compact(&self) -> String {
+        let mut bytes = Vec::with_capacity(72);
+        bytes.extend_from_slice(&self.r);
+        bytes.extend_from_slice(&self.s);
+        bytes.push(u8::try_from(self.v).unwrap());
+        hex_encode(&bytes)
     }
 }
 

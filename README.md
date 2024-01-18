@@ -6,6 +6,10 @@ ETH integration starter project on the Internet Computer.
 
 ### Clone this repo
 
+```shell
+git clone git@github.com:benjizhai/ic-eth-starter-rust.git
+```
+
 ### Install Toolchain
 
 ### Build
@@ -14,3 +18,5 @@ ETH integration starter project on the Internet Computer.
 export RUSTIC_USER_PAGE_END=1024
 make
 ```
+
+### Run

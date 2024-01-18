@@ -1,4 +1,3 @@
-type Arg = variant { Upgrade; Init : record {} };
 type CanisterConfig = record {
   canister_getlogs_topics : vec text;
   expiry_seconds : nat64;
@@ -21,7 +20,7 @@ type CanisterState = record {
   last_block : nat64;
   tecdsa_pubkey : vec nat8;
 };
-type EcdsaSignature = record { r : vec nat8; s : vec nat8; v : nat8 };
+type EcdsaSignature = record { r : vec nat8; s : vec nat8; v : nat64 };
 type EthRpcError = variant {
   ServiceUrlHostNotAllowed : text;
   HttpRequestError : record { code : nat32; message : text };
@@ -62,7 +61,7 @@ type SignRequest = record {
   chain_id : nat;
   nonce : nat;
 };
-service : (Arg) -> {
+service : {
   get_canister_config : () -> (CanisterConfig) query;
   get_canister_state : () -> (CanisterState) query;
   get_signature : (nat) -> (opt EcdsaSignature) query;

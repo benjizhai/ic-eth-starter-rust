@@ -18,15 +18,13 @@
         }
       }
     },
-    "ethrpc": {
+    "evm_rpc": {
       "type": "custom",
-      "wasm": "",
-      "candid": "ic-eth-rpc.did",
+      "candid": "https://github.com/internet-computer-protocol/ic-eth-rpc/releases/latest/download/evm_rpc.did",
+      "wasm": "https://github.com/internet-computer-protocol/ic-eth-rpc/releases/latest/download/evm_rpc_dev.wasm.gz",
       "remote": {
-        "candid": "ic-eth-rpc.did",
         "id": {
-          "ic": "zdciv-4iaaa-aaaab-aadoa-cai",
-          "local": "bw4dl-smaaa-aaaaa-qaacq-cai"
+          "ic": "a6d44-nyaaa-aaaap-abp7q-cai"
         }
       }
     }
