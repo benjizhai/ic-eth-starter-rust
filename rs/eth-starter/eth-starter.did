@@ -76,6 +76,7 @@ service : {
   get_signature : (nat) -> (opt EcdsaSignature) query;
   get_tecdsa_signer_address_hex : () -> (text) query;
   personal_sign : (text) -> (text);
+  process_block : (text) -> (Result);
   set_canister_config : (CanisterConfig) -> (Result);
   sign_eip1559_transaction : (SignRequestEip1559) -> (text);
   sign_legacy_transaction : (SignRequest) -> (text);

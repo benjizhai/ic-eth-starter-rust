@@ -221,7 +221,7 @@ async fn sign_legacy_transaction(req: SignRequest) -> String {
         v: signature.v.into(),
     };
 
-    let mut signed_tx_bytes = tx.rlp_signed(&sig).to_vec();
+    let signed_tx_bytes = tx.rlp_signed(&sig).to_vec();
 
     hex_encode_0x(&signed_tx_bytes)
 }
@@ -330,224 +330,224 @@ async fn sign_prehash(prehash: String) -> String {
     EcdsaSignature::from_prehash(&hash_bytes, &signature, &pubkey).to_string_compact()
 }
 
-// async fn eth_rpc_call(
-//     json_rpc_payload: Value,
-//     cycles: u128,
-// ) -> Result<Result<Vec<u8>, EthRpcError>, ReturnError> {
-//     let config: canisterConfig = get_canister_config();
-//     debug_log(
-//         DEBUG,
-//         format!("Sending json_rpc_request {}", json_rpc_payload),
-//     )?;
-//     let rpc_result: Result<Result<Vec<u8>, EthRpcError>, _> = canister_call_with_payment(
-//         config.eth_rpc_canister_id,
-//         "json_rpc_request",
-//         (
-//             json_rpc_payload.to_string(),
-//             config.eth_rpc_service_url.clone(),
-//             config.max_response_bytes,
-//         ),
-//         candid::encode_args,
-//         |r| candid::decode_one(r),
-//         cycles,
-//     )
-//     .await;
-//     match rpc_result {
-//         Ok(Ok(bytes)) => {
-//             debug_log(
-//                 DEBUG,
-//                 format!(
-//                     "Received rpc result {}",
-//                     String::from_utf8(bytes.clone())
-//                         .unwrap_or_else(|_| "(invalid utf8 encoding)".to_string())
-//                 ),
-//             )?;
-//             Ok(Ok(bytes))
-//         }
-//         Ok(Err(err)) => {
-//             debug_log(DEBUG, format!("Received rpc error {:?}", err))?;
-//             Ok(Err(err))
-//         }
-//         Err((err_code, err_msg)) => {
-//             let err = format!("{{code: {:?}, message: {}}}", err_code, err_msg);
-//             debug_log(DEBUG, format!("Received error {}", err))?;
-//             Err(ReturnError::InterCanisterCallError(err))
-//         }
-//     }
-// }
+async fn eth_rpc_call(
+    json_rpc_payload: Value,
+    cycles: u128,
+) -> Result<Result<Vec<u8>, EthRpcError>, ReturnError> {
+    let config: CanisterConfig = get_canister_config();
+    debug_log(
+        DEBUG,
+        format!("Sending json_rpc_request {}", json_rpc_payload),
+    )?;
+    let rpc_result: Result<Result<Vec<u8>, EthRpcError>, _> = canister_call_with_payment(
+        config.eth_rpc_canister_id,
+        "json_rpc_request",
+        (
+            json_rpc_payload.to_string(),
+            config.eth_rpc_service_url.clone(),
+            config.max_response_bytes,
+        ),
+        candid::encode_args,
+        |r| candid::decode_one(r),
+        cycles,
+    )
+    .await;
+    match rpc_result {
+        Ok(Ok(bytes)) => {
+            debug_log(
+                DEBUG,
+                format!(
+                    "Received rpc result {}",
+                    String::from_utf8(bytes.clone())
+                        .unwrap_or_else(|_| "(invalid utf8 encoding)".to_string())
+                ),
+            )?;
+            Ok(Ok(bytes))
+        }
+        Ok(Err(err)) => {
+            debug_log(DEBUG, format!("Received rpc error {:?}", err))?;
+            Ok(Err(err))
+        }
+        Err((err_code, err_msg)) => {
+            let err = format!("{{code: {:?}, message: {}}}", err_code, err_msg);
+            debug_log(DEBUG, format!("Received error {}", err))?;
+            Err(ReturnError::InterCanisterCallError(err))
+        }
+    }
+}
 
-// /// Look up ethereum event log of the given block for Burn events.
-// /// Process those that have not yet been processed.
-// ///
-// /// This is can only be called by owner and only meant for debugging purposes.
-// #[update]
-// #[modifiers("only_owner")]
-// pub async fn process_block(block_hash: String) -> Result<(), ReturnError> {
-//     // get log events from block with the given block_hash
-//     // NOTE: if log exceeds pre-allocated space, we need manual intervention.
-//     let config: canisterConfig = get_canister_config();
-//     let json_rpc_payload = json!({
-//         "jsonrpc":"2.0",
-//         "method":"eth_getLogs",
-//         "params":[{
-//             "address": config.zkf_staking_address,
-//             "blockHash": block_hash,
-//         }],
-//     });
+/// Look up ethereum event log of the given block for Burn events.
+/// Process those that have not yet been processed.
+///
+/// This is can only be called by owner and only meant for debugging purposes.
+#[update]
+#[modifiers("only_owner")]
+pub async fn process_block(block_hash: String) -> Result<(), ReturnError> {
+    // get log events from block with the given block_hash
+    // NOTE: if log exceeds pre-allocated space, we need manual intervention.
+    let config: CanisterConfig = get_canister_config();
+    let json_rpc_payload = json!({
+        "jsonrpc":"2.0",
+        "method":"eth_getLogs",
+        "params":[{
+            "address": config.sample_erc20_address,
+            "blockHash": block_hash,
+        }],
+    });
 
-//     let result = eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_getlogs).await?;
-//     let logs: Value = match result {
-//         Ok(bytes) => serde_json::from_slice(&bytes)
-//             .map_err(|err| ReturnError::JsonParseError(err.to_string()))?,
-//         Err(err) => return Err(ReturnError::EthRpcError(err)),
-//     };
-//     process_logs(logs).await
-// }
+    let result = eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_getlogs).await?;
+    let logs: Value = match result {
+        Ok(bytes) => serde_json::from_slice(&bytes)
+            .map_err(|err| ReturnError::JsonParseError(err.to_string()))?,
+        Err(err) => return Err(ReturnError::EthRpcError(err)),
+    };
+    process_logs(logs).await
+}
 
-// /// Given some event logs, process burn events in them.
-// async fn process_logs(logs: Value) -> Result<(), ReturnError> {
-//     let entries = read_event_logs(&logs).map_err(ReturnError::EventLogError)?;
-//     debug_log(DEBUG, format!("Processing {} log entries", entries.len()))?;
-//     for entry in entries {
-//         match parse_burn_event(&entry) {
-//             Ok(_burn) => {}
-//             Err(err) => {
-//                 // parsing error? unknown event type? They should be investigated!
-//                 debug_log(
-//                     WARN,
-//                     format!(
-//                         "Skip processing event {:?} due to error {:?}",
-//                         entry.event_id, err,
-//                     ),
-//                 )?;
-//             }
-//         }
-//     }
+/// Given some event logs, process burn events in them.
+async fn process_logs(logs: Value) -> Result<(), ReturnError> {
+    let entries = read_event_logs(&logs).map_err(ReturnError::EventLogError)?;
+    debug_log(DEBUG, format!("Processing {} log entries", entries.len()))?;
+    for entry in entries {
+        match parse_burn_event(&entry) {
+            Ok(_burn) => {}
+            Err(err) => {
+                // parsing error? unknown event type? They should be investigated!
+                debug_log(
+                    WARN,
+                    format!(
+                        "Skip processing event {:?} due to error {:?}",
+                        entry.event_id, err,
+                    ),
+                )?;
+            }
+        }
+    }
 
-//     Ok(())
-// }
+    Ok(())
+}
 
-// /// Sync event logs of the canister ERC-20 contract via RPC.
-// /// This is meant to be called from a timer.
-// pub async fn sync_event_logs() -> Result<(), ReturnError> {
-//     let _guard = ReentrancyGuard::new();
-//     // get log events from block with the given block_hash
-//     // NOTE: if log exceeds pre-allocated space, we need manual intervention.
-//     let config: canisterConfig = get_canister_config();
-//     let mut state: canisterState = get_canister_state();
-//     let next_block = state
-//         .next_blocks
-//         .pop_front()
-//         .map(|x| format!("{:#x}", x))
-//         .unwrap_or_else(|| "safe".to_string());
+/// Sync event logs of the canister ERC-20 contract via RPC.
+/// This is meant to be called from a timer.
+pub async fn sync_event_logs() -> Result<(), ReturnError> {
+    let _guard = ReentrancyGuard::new();
+    // get log events from block with the given block_hash
+    // NOTE: if log exceeds pre-allocated space, we need manual intervention.
+    let config: CanisterConfig = get_canister_config();
+    let mut state: CanisterState = get_canister_state();
+    let next_block = state
+        .next_blocks
+        .pop_front()
+        .map(|x| format!("{:#x}", x))
+        .unwrap_or_else(|| "safe".to_string());
 
-//     // get logs between last_block and next_block.
-//     let json_rpc_payload = json!({
-//         "jsonrpc":"2.0",
-//         "method":"eth_getLogs",
-//         "params":[{
-//             "address": config.zkf_staking_address,
-//             "fromBlock": format!("{:#x}", state.last_block + 1),
-//             "toBlock": next_block,
-//             "topics": [ config.canister_getlogs_topics ],
-//         }],
-//     });
-//     debug_log(
-//         INFO,
-//         format!(
-//             "Syncing event logs from block {} to {}",
-//             state.last_block + 1,
-//             hex_decode_0x_u64(&next_block)
-//                 .map(|x| x.to_string())
-//                 .unwrap_or_else(|| next_block.clone())
-//         ),
-//     )?;
-//     match eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_getlogs).await? {
-//         Err(EthRpcError::HttpRequestError { code: _, message })
-//             if message.contains("body exceeds size limit") =>
-//         {
-//             debug_log(
-//                 WARN,
-//                 format!(
-//                     "RPC result exceeds buffer size limit, trying to halve range [{}, {})",
-//                     state.last_block + 1,
-//                     hex_decode_0x_u64(&next_block)
-//                         .map(|x| x.to_string())
-//                         .unwrap_or_else(|| next_block.clone())
-//                 ),
-//             )?;
-//             let last_block = if let Some(last_block) = hex_decode_0x_u64(&next_block) {
-//                 (last_block - state.last_block) / 2 + state.last_block
-//             } else {
-//                 let json_rpc_payload = json!({
-//                     "jsonrpc":"2.0",
-//                     "method":"eth_blockNumber",
-//                     "params":[]
-//                 });
-//                 let result =
-//                     eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_blocknumber).await;
-//                 debug_log(DEBUG, format!("Syncing event logs received {:?}", result))?;
-//                 let result: Value = match result? {
-//                     Ok(bytes) => serde_json::from_slice(&bytes)
-//                         .map_err(|err| ReturnError::JsonParseError(err.to_string()))?,
-//                     Err(err) => {
-//                         return Err(ReturnError::JsonParseError(format!("{:?}", err)));
-//                     }
-//                 };
-//                 let block_number = result
-//                     .as_object()
-//                     .and_then(|x| x.get("result"))
-//                     .and_then(|x| x.as_str())
-//                     .and_then(hex_decode_0x_u64)
-//                     .ok_or_else(|| {
-//                         ReturnError::JsonParseError(
-//                             "No valid result block number is found".to_string(),
-//                         )
-//                     })?;
-//                 debug_log(
-//                     INFO,
-//                     format!("Received latest block number {:?}", block_number),
-//                 )?;
-//                 (block_number - state.last_block) / 2 + state.last_block
-//             };
-//             if last_block == state.last_block + 1 {
-//                 return Err(ReturnError::MaxResponseBytesNotEnoughForBlock(last_block));
-//             }
+    // get logs between last_block and next_block.
+    let json_rpc_payload = json!({
+        "jsonrpc":"2.0",
+        "method":"eth_getLogs",
+        "params":[{
+            "address": config.sample_erc20_address,
+            "fromBlock": format!("{:#x}", state.last_block + 1),
+            "toBlock": next_block,
+            "topics": [ config.canister_getlogs_topics ],
+        }],
+    });
+    debug_log(
+        INFO,
+        format!(
+            "Syncing event logs from block {} to {}",
+            state.last_block + 1,
+            hex_decode_0x_u64(&next_block)
+                .map(|x| x.to_string())
+                .unwrap_or_else(|| next_block.clone())
+        ),
+    )?;
+    match eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_getlogs).await? {
+        Err(EthRpcError::HttpRequestError { code: _, message })
+            if message.contains("body exceeds size limit") =>
+        {
+            debug_log(
+                WARN,
+                format!(
+                    "RPC result exceeds buffer size limit, trying to halve range [{}, {})",
+                    state.last_block + 1,
+                    hex_decode_0x_u64(&next_block)
+                        .map(|x| x.to_string())
+                        .unwrap_or_else(|| next_block.clone())
+                ),
+            )?;
+            let last_block = if let Some(last_block) = hex_decode_0x_u64(&next_block) {
+                (last_block - state.last_block) / 2 + state.last_block
+            } else {
+                let json_rpc_payload = json!({
+                    "jsonrpc":"2.0",
+                    "method":"eth_blockNumber",
+                    "params":[]
+                });
+                let result =
+                    eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_blocknumber).await;
+                debug_log(DEBUG, format!("Syncing event logs received {:?}", result))?;
+                let result: Value = match result? {
+                    Ok(bytes) => serde_json::from_slice(&bytes)
+                        .map_err(|err| ReturnError::JsonParseError(err.to_string()))?,
+                    Err(err) => {
+                        return Err(ReturnError::JsonParseError(format!("{:?}", err)));
+                    }
+                };
+                let block_number = result
+                    .as_object()
+                    .and_then(|x| x.get("result"))
+                    .and_then(|x| x.as_str())
+                    .and_then(hex_decode_0x_u64)
+                    .ok_or_else(|| {
+                        ReturnError::JsonParseError(
+                            "No valid result block number is found".to_string(),
+                        )
+                    })?;
+                debug_log(
+                    INFO,
+                    format!("Received latest block number {:?}", block_number),
+                )?;
+                (block_number - state.last_block) / 2 + state.last_block
+            };
+            if last_block == state.last_block + 1 {
+                return Err(ReturnError::MaxResponseBytesNotEnoughForBlock(last_block));
+            }
 
-//             canister_STATE.with(|canister_state| {
-//                 let mut canister_state = canister_state.borrow_mut();
-//                 let mut state = canister_state.get().0.clone();
-//                 if let Some(s) = state.as_mut() {
-//                     s.next_blocks.push_front(last_block);
-//                 };
-//                 canister_state.set(Cbor(state)).unwrap();
-//             });
-//             Err(ReturnError::MaxResponseBytesExceeded)
-//         }
-//         Err(err) => Err(ReturnError::EthRpcError(err)),
-//         Ok(bytes) => {
-//             let logs: Value = serde_json::from_slice(&bytes)
-//                 .map_err(|err| ReturnError::JsonParseError(err.to_string()))?;
-//             // Find the highest block number from log. This is an estimate since
-//             // we don't know the block number of the latest "safe" block.
-//             let last_block = last_block_number_from_event_logs(&logs);
-//             process_logs(logs).await?;
-//             canister_STATE.with(|canister_state| {
-//                 let mut canister_state = canister_state.borrow_mut();
-//                 let mut state = canister_state.get().0.clone();
-//                 if let Some(s) = state.as_mut() {
-//                     if let Some(last_block) = s.next_blocks.pop_front() {
-//                         s.last_block = last_block;
-//                     } else if let Some(last_block) = last_block {
-//                         s.last_block = last_block;
-//                     }
-//                 }
-//                 canister_state.set(Cbor(state)).unwrap();
-//             });
-//             Ok(())
-//         }
-//     }
-// }
+            CANISTER_STATE.with(|canister_state| {
+                let mut canister_state = canister_state.borrow_mut();
+                let mut state = canister_state.get().0.clone();
+                if let Some(s) = state.as_mut() {
+                    s.next_blocks.push_front(last_block);
+                };
+                canister_state.set(Cbor(state)).unwrap();
+            });
+            Err(ReturnError::MaxResponseBytesExceeded)
+        }
+        Err(err) => Err(ReturnError::EthRpcError(err)),
+        Ok(bytes) => {
+            let logs: Value = serde_json::from_slice(&bytes)
+                .map_err(|err| ReturnError::JsonParseError(err.to_string()))?;
+            // Find the highest block number from log. This is an estimate since
+            // we don't know the block number of the latest "safe" block.
+            let last_block = last_block_number_from_event_logs(&logs);
+            process_logs(logs).await?;
+            CANISTER_STATE.with(|canister_state| {
+                let mut canister_state = canister_state.borrow_mut();
+                let mut state = canister_state.get().0.clone();
+                if let Some(s) = state.as_mut() {
+                    if let Some(last_block) = s.next_blocks.pop_front() {
+                        s.last_block = last_block;
+                    } else if let Some(last_block) = last_block {
+                        s.last_block = last_block;
+                    }
+                }
+                canister_state.set(Cbor(state)).unwrap();
+            });
+            Ok(())
+        }
+    }
+}
 
 #[query]
 pub fn get_signature(msg_id: MsgId) -> Option<EcdsaSignature> {
@@ -557,61 +557,36 @@ pub fn get_signature(msg_id: MsgId) -> Option<EcdsaSignature> {
     })
 }
 
-// // Call sync_event_logs(), and if it requires re-run, call it again.
-// // Also log errors returned as warning.
-// async fn periodic_task() {
-//     loop {
-//         match sync_event_logs().await {
-//             Err(ReturnError::MaxResponseBytesExceeded) => (), // re-run
-//             Err(ReturnError::MaxResponseBytesNotEnoughForBlock(block)) => {
-//                 // NOTE: This error requires a manual fix. We'll stop the timer first.
-//                 debug_log(
-//                     ERROR,
-//                     format!("Block {} returns events exceeding max buffer size. It requires manual intervention!", block),
-//                 ).unwrap();
-//                 TIMER_ID.with(|id| {
-//                     if let Some(timer_id) = *id.borrow() {
-//                         ic_cdk_timers::clear_timer(timer_id);
-//                     }
-//                 });
-//             }
-//             Err(err) => {
-//                 debug_log(WARN, format!("sync_event_logs returns error {:?}", err)).unwrap();
-//                 break;
-//             }
-//             Ok(_) => break,
-//         }
-//     }
-// }
-
-// /// Set the configuration. Must be called at least once after deployment.
-// /// It also starts syncing of event logs on a timer, based on the given
-// /// configuration parameter.
-// #[update]
-// #[modifiers("only_owner")]
-// pub fn set_canister_config(config: canisterConfig) -> Result<(), ReturnError> {
-//     canister_CONFIG
-//         .with(|canister_config| {
-//             let mut canister_config = canister_config.borrow_mut();
-//             canister_config.set(Cbor(Some(config)))
-//         })
-//         .map(|_| ())
-//         .map_err(|_| ReturnError::MemoryError)?;
-
-//     TIMER_ID.with(|id| {
-//         if let Some(timer_id) = *id.borrow() {
-//             ic_cdk_timers::clear_timer(timer_id);
-//         }
-//         let timer_id = ic_cdk_timers::set_timer_interval(
-//             Duration::from_secs(get_canister_config().sync_interval_secs),
-//             || ic_cdk::spawn(periodic_task()),
-//         );
-//         *id.borrow_mut() = Some(timer_id);
-//     });
-//     Ok(())
-// }
+// Call sync_event_logs(), and if it requires re-run, call it again.
+// Also log errors returned as warning.
+async fn periodic_task() {
+    loop {
+        match sync_event_logs().await {
+            Err(ReturnError::MaxResponseBytesExceeded) => (), // re-run
+            Err(ReturnError::MaxResponseBytesNotEnoughForBlock(block)) => {
+                // NOTE: This error requires a manual fix. We'll stop the timer first.
+                debug_log(
+                    ERROR,
+                    format!("Block {} returns events exceeding max buffer size. It requires manual intervention!", block),
+                ).unwrap();
+                TIMER_ID.with(|id| {
+                    if let Some(timer_id) = *id.borrow() {
+                        ic_cdk_timers::clear_timer(timer_id);
+                    }
+                });
+            }
+            Err(err) => {
+                debug_log(WARN, format!("sync_event_logs returns error {:?}", err)).unwrap();
+                break;
+            }
+            Ok(_) => break,
+        }
+    }
+}
 
 /// Set the configuration. Must be called at least once after deployment.
+/// It also starts syncing of event logs on a timer, based on the given
+/// configuration parameter.
 #[update]
 #[modifiers("only_owner")]
 pub fn set_canister_config(config: CanisterConfig) -> Result<(), ReturnError> {
@@ -622,8 +597,33 @@ pub fn set_canister_config(config: CanisterConfig) -> Result<(), ReturnError> {
         })
         .map(|_| ())
         .map_err(|_| ReturnError::MemoryError)?;
+
+    TIMER_ID.with(|id| {
+        if let Some(timer_id) = *id.borrow() {
+            ic_cdk_timers::clear_timer(timer_id);
+        }
+        let timer_id = ic_cdk_timers::set_timer_interval(
+            Duration::from_secs(get_canister_config().sync_interval_secs),
+            || ic_cdk::spawn(periodic_task()),
+        );
+        *id.borrow_mut() = Some(timer_id);
+    });
     Ok(())
 }
+
+// /// Set the configuration. Must be called at least once after deployment.
+// #[update]
+// #[modifiers("only_owner")]
+// pub fn set_canister_config(config: CanisterConfig) -> Result<(), ReturnError> {
+//     CANISTER_CONFIG
+//         .with(|canister_config| {
+//             let mut canister_config = canister_config.borrow_mut();
+//             canister_config.set(Cbor(Some(config)))
+//         })
+//         .map(|_| ())
+//         .map_err(|_| ReturnError::MemoryError)?;
+//     Ok(())
+// }
 
 // Update pub key and last_block stored in state.
 #[update]
