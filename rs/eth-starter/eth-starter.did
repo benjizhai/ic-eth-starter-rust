@@ -14,13 +14,6 @@ type CanisterConfig = record {
   debug_log_level : nat8;
   sync_interval_secs : nat64;
 };
-type CanisterState = record {
-  next_blocks : vec nat64;
-  tecdsa_signer_address : vec nat8;
-  last_block : nat64;
-  tecdsa_pubkey : vec nat8;
-};
-type EcdsaSignature = record { r : vec nat8; s : vec nat8; v : nat64 };
 type EthRpcError = variant {
   ServiceUrlHostNotAllowed : text;
   HttpRequestError : record { code : nat32; message : text };
@@ -31,7 +24,6 @@ type EthRpcError = variant {
   NoPermission;
 };
 type EventError = record { code : opt nat64; message : text };
-type LogView = record { to : opt nat64; from : opt nat64 };
 type Result = variant { Ok; Err : ReturnError };
 type ReturnError = variant {
   GenericError;
@@ -71,9 +63,6 @@ type SignRequestEip1559 = record {
   nonce : nat;
 };
 service : {
-  get_canister_config : () -> (CanisterConfig) query;
-  get_canister_state : () -> (CanisterState) query;
-  get_signature : (nat) -> (opt EcdsaSignature) query;
   get_tecdsa_signer_address_hex : () -> (text) query;
   personal_sign : (text) -> (text);
   process_block : (text) -> (Result);
@@ -82,5 +71,4 @@ service : {
   sign_legacy_transaction : (SignRequest) -> (text);
   sign_prehash : (text) -> (text);
   update_canister_state : () -> (Result);
-  view_debug_log : (LogView) -> (vec text) query;
 }
