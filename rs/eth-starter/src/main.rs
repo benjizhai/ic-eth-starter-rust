@@ -47,37 +47,6 @@ use k256::{
     EncodedPoint, PublicKey, Secp256k1,
 };
 
-use icrc_ledger_types::icrc1;
-use icrc_ledger_types::icrc2;
-
-#[derive(CandidType, serde::Deserialize)]
-pub struct InitArg {}
-
-#[derive(CandidType, serde::Deserialize)]
-enum Arg {
-    Init(InitArg),
-    Upgrade,
-}
-
-#[init]
-fn init(arg: Arg) {
-    match arg {
-        Arg::Init(InitArg {}) => {
-            rustic::rustic_init();
-
-            // Insert init code for your canister here
-        }
-        Arg::Upgrade => ic_cdk::trap("upgrade args in init"),
-    }
-}
-
-#[post_upgrade]
-pub fn post_upgrade() {
-    rustic::rustic_post_upgrade(false, false, false);
-
-    // Insert post upgrade code for your canister here
-}
-
 #[derive(CandidType, serde::Deserialize)]
 pub struct SignRequest {
     pub chain_id: Nat,
@@ -125,7 +94,8 @@ async fn sign_legacy_transaction(req: SignRequest) -> String {
     let (pubkey, signature) =
         pubkey_and_signature(txhash.to_vec(), vec![], config.ecdsa_key_name).await;
 
-    let signature = EcdsaSignature::from_prehash(&txhash, &signature, &pubkey);
+    let mut signature = EcdsaSignature::from_prehash(&txhash, &signature, &pubkey);
+    signature.expand_v(req.chain_id.0.to_u64_digits()[0], true);
     let sig = Signature {
         r: U256::from_big_endian(&signature.r),
         s: U256::from_big_endian(&signature.s),
@@ -576,7 +546,37 @@ pub fn get_canister_state() -> CanisterState {
     })
 }
 
-/// Logging
+// ================== Canister Lifecycle ==================
+
+#[derive(CandidType, serde::Deserialize)]
+pub struct InitArg {}
+
+#[derive(CandidType, serde::Deserialize)]
+enum Arg {
+    Init(InitArg),
+    Upgrade,
+}
+
+#[init]
+fn init(arg: Arg) {
+    match arg {
+        Arg::Init(InitArg {}) => {
+            rustic::rustic_init();
+
+            // Insert init code for your canister here
+        }
+        Arg::Upgrade => ic_cdk::trap("upgrade args in init"),
+    }
+}
+
+#[post_upgrade]
+pub fn post_upgrade() {
+    rustic::rustic_post_upgrade(false, false, false);
+
+    // Insert post upgrade code for your canister here
+}
+
+// ================ Logging ================
 
 // The following defines log level.
 #[derive(Copy, Clone, Debug)]
@@ -634,6 +634,8 @@ pub fn debug_log(level: LogLevel, line: String) -> Result<(), ReturnError> {
         Ok(())
     }
 }
+
+// ================ Candid Export ================
 
 fn main() {}
 
