@@ -5,4 +5,4 @@ rs/eth-starter/eth-starter.did: $(PRJ_WASM)
 	candid-extractor $< > $@
 
 $(PRJ_WASM): $(PRJ_SRCS)
-	cargo build --target wasm32-unknown-unknown --release -p eth_starter
+	cargo build --target wasm32-unknown-unknown --release -p eth-starter

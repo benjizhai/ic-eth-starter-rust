@@ -2,9 +2,6 @@
 #![allow(unused_imports)]
 
 use eth_starter::crypto::*;
-use eth_starter::lifecycle::*;
-use eth_starter::logging::LogLevel::*;
-use eth_starter::logging::*;
 use eth_starter::memory::*;
 use eth_starter::tecdsa::*;
 use eth_starter::types::*;
@@ -20,7 +17,7 @@ use ic_cdk::api::management_canister::ecdsa::{
     ecdsa_public_key, sign_with_ecdsa, EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgument,
     EcdsaPublicKeyResponse, SignWithEcdsaArgument,
 };
-use ic_cdk_macros::{query, update};
+use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap, StableCell, StableVec, Storable};
 
 use rustic::access_control::*;
@@ -52,6 +49,34 @@ use k256::{
 
 use icrc_ledger_types::icrc1;
 use icrc_ledger_types::icrc2;
+
+#[derive(CandidType, serde::Deserialize)]
+pub struct InitArg {}
+
+#[derive(CandidType, serde::Deserialize)]
+enum Arg {
+    Init(InitArg),
+    Upgrade,
+}
+
+#[init]
+fn init(arg: Arg) {
+    match arg {
+        Arg::Init(InitArg {}) => {
+            rustic::rustic_init();
+
+            // Insert init code for your canister here
+        }
+        Arg::Upgrade => ic_cdk::trap("upgrade args in init"),
+    }
+}
+
+#[post_upgrade]
+pub fn post_upgrade() {
+    rustic::rustic_post_upgrade(false, false, false);
+
+    // Insert post upgrade code for your canister here
+}
 
 #[derive(CandidType, serde::Deserialize)]
 pub struct SignRequest {
@@ -533,6 +558,81 @@ pub async fn update_canister_state() -> Result<(), ReturnError> {
 pub fn get_tecdsa_signer_address_hex() -> String {
     let state: CanisterState = get_canister_state();
     hex_encode_0x(&state.tecdsa_signer_address)
+}
+
+#[query]
+pub fn get_canister_config() -> CanisterConfig {
+    CANISTER_CONFIG.with(|canister_config| {
+        let canister_config = canister_config.borrow();
+        canister_config.get().0.clone().unwrap()
+    })
+}
+
+#[query]
+pub fn get_canister_state() -> CanisterState {
+    CANISTER_STATE.with(|canister_state| {
+        let canister_state = canister_state.borrow();
+        canister_state.get().0.clone().unwrap_or_default()
+    })
+}
+
+/// Logging
+
+// The following defines log level.
+#[derive(Copy, Clone, Debug)]
+pub enum LogLevel {
+    ERROR = 0,
+    WARN = 1,
+    INFO = 2,
+    DEBUG = 3,
+}
+
+use LogLevel::*;
+
+#[derive(Clone, CandidType, serde::Deserialize)]
+pub struct LogView {
+    from: Option<u64>,
+    to: Option<u64>,
+}
+
+/// View debug logs in the given range (not including 'to').
+/// If 'from' is missing, 0 is used.
+/// If 'to' is missing, current length of all logs is used.
+#[query]
+#[modifiers("only_owner")]
+pub async fn view_debug_log(view: LogView) -> Vec<String> {
+    let debug_log_len = DEBUG_LOG.with(|log| log.borrow().len());
+    let from = view.from.unwrap_or_default();
+    let to = view.to.unwrap_or(debug_log_len).min(debug_log_len);
+    let mut logs = Vec::new();
+    DEBUG_LOG.with(|log| {
+        let debug_log = log.borrow();
+        for i in from..to {
+            logs.push(debug_log.get(i).clone().unwrap_or_default())
+        }
+    });
+    logs
+}
+
+/// Add a line of given log level to the debug log, only when
+/// the given level is smaller than or equal to config.debug_log_level.
+pub fn debug_log(level: LogLevel, line: String) -> Result<(), ReturnError> {
+    let config = get_canister_config();
+    if (level as u8) <= config.debug_log_level {
+        DEBUG_LOG.with(|log| {
+            log.borrow()
+                .append(&format!(
+                    "{} {:?} {}",
+                    canister_time() / 1_000_000,
+                    level,
+                    line
+                ))
+                .map(|_| ())
+                .map_err(|_| ReturnError::OutOfMemory)
+        })
+    } else {
+        Ok(())
+    }
 }
 
 fn main() {}

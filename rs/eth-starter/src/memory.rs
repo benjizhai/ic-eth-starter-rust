@@ -1,5 +1,4 @@
 use candid::{CandidType, Decode, Encode, Principal};
-use ic_cdk_macros::{query, update};
 use ic_stable_structures::memory_manager::MemoryId;
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::DefaultMemoryImpl;
@@ -92,20 +91,4 @@ thread_local! {
     // TimerId
     pub static TIMER_ID: RefCell<Option<ic_cdk_timers::TimerId>> =
         RefCell::new(None);
-}
-
-#[query]
-pub fn get_canister_config() -> CanisterConfig {
-    CANISTER_CONFIG.with(|canister_config| {
-        let canister_config = canister_config.borrow();
-        canister_config.get().0.clone().unwrap()
-    })
-}
-
-#[query]
-pub fn get_canister_state() -> CanisterState {
-    CANISTER_STATE.with(|canister_state| {
-        let canister_state = canister_state.borrow();
-        canister_state.get().0.clone().unwrap_or_default()
-    })
 }
