@@ -257,6 +257,32 @@ async fn eth_rpc_call(
     }
 }
 
+#[update]
+#[modifiers("only_owner")]
+pub async fn get_vitalik_balance() -> String {
+    let config: CanisterConfig = get_canister_config();
+    let json_rpc_payload = json!({
+        "jsonrpc":"2.0",
+        "method":"eth_getBalance",
+        "params":[
+            "0x220866B1A2219f40e72f5c628B65D54268cA3A9D",
+            "latest"
+        ],
+    });
+    let result = eth_rpc_call(json_rpc_payload, config.cycle_cost_of_eth_getlogs).await;
+    debug_log(DEBUG, format!("get_vitalik_balance received {:?}", result)).unwrap();
+    match result {
+        Ok(Ok(bytes)) => {
+            let balance: Value = serde_json::from_slice(&bytes).unwrap();
+            let balance = balance.as_str().unwrap();
+            let balance = U256::from_str(balance).unwrap();
+            format!("{}", balance)
+        }
+        Ok(Err(err)) => format!("{:?}", err),
+        Err(err) => format!("{:?}", err),
+    }
+}
+
 /// Look up ethereum event log of the given block for Burn events.
 /// Process those that have not yet been processed.
 ///
@@ -483,20 +509,6 @@ pub fn set_canister_config(config: CanisterConfig) -> Result<(), ReturnError> {
     });
     Ok(())
 }
-
-// /// Set the configuration. Must be called at least once after deployment.
-// #[update]
-// #[modifiers("only_owner")]
-// pub fn set_canister_config(config: CanisterConfig) -> Result<(), ReturnError> {
-//     CANISTER_CONFIG
-//         .with(|canister_config| {
-//             let mut canister_config = canister_config.borrow_mut();
-//             canister_config.set(Cbor(Some(config)))
-//         })
-//         .map(|_| ())
-//         .map_err(|_| ReturnError::MemoryError)?;
-//     Ok(())
-// }
 
 // Update pub key and last_block stored in state.
 #[update]

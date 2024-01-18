@@ -18,7 +18,7 @@ pub struct CanisterConfig {
     pub eth_rpc_service_url: String,
     pub eth_rpc_canister_id: Principal,
     pub sample_erc20_address: String,
-    pub canister_fee: Amount,
+    // pub canister_fee: Amount,
     pub canister_getlogs_topics: Vec<String>,
     pub expiry_seconds: u64,
     pub target_chain_ids: Vec<u64>,

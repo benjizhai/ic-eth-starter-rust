@@ -4,7 +4,6 @@ type CanisterConfig = record {
   expiry_seconds : nat64;
   max_response_bytes : nat64;
   ecdsa_key_name : text;
-  canister_fee : nat64;
   target_chain_ids : vec nat64;
   eth_rpc_service_url : text;
   cycle_cost_of_eth_blocknumber : nat;
@@ -74,6 +73,7 @@ service : (Arg) -> {
   get_canister_config : () -> (CanisterConfig) query;
   get_canister_state : () -> (CanisterState) query;
   get_tecdsa_signer_address_hex : () -> (text) query;
+  get_vitalik_balance : () -> (text);
   personal_sign : (text) -> (text);
   process_block : (text) -> (Result);
   set_canister_config : (CanisterConfig) -> (Result);
