@@ -172,6 +172,65 @@ pub struct SignRequest {
     pub chain_id: Nat,
     pub to: String,
     pub gas: Nat,
+    pub gas_price: Nat,
+    pub value: Nat,
+    pub nonce: Nat,
+    pub data: Option<String>,
+}
+
+/// Computes a signature for a legacy transaction.
+#[update]
+#[modifiers("only_owner")]
+async fn sign_legacy_transaction(req: SignRequest) -> String {
+    use ethers_core::types::transaction::request::TransactionRequest;
+    use ethers_core::types::Signature;
+
+    let config = get_canister_config();
+
+    let data = req
+        .data
+        .as_ref()
+        .map(|s| Bytes::from(hex_decode_0x(s).expect("hex decode error")));
+
+    let tx = TransactionRequest {
+        chain_id: Some(nat_to_u64(&req.chain_id)),
+        from: None,
+        to: Some(
+            Address::from_str(&req.to)
+                .expect("failed to parse the destination address")
+                .into(),
+        ),
+        gas: Some(nat_to_u256(&req.gas)),
+        gas_price: Some(nat_to_u256(&req.gas_price)),
+        value: Some(nat_to_u256(&req.value)),
+        nonce: Some(nat_to_u256(&req.nonce)),
+        data,
+    };
+
+    let unsigned_tx_bytes = tx.rlp().to_vec();
+
+    let txhash = keccak256(&unsigned_tx_bytes);
+
+    let (pubkey, signature) =
+        pubkey_and_signature(txhash.to_vec(), vec![], config.ecdsa_key_name).await;
+
+    let signature = EcdsaSignature::from_prehash(&txhash, &signature, &pubkey);
+    let sig = Signature {
+        r: U256::from_big_endian(&signature.r),
+        s: U256::from_big_endian(&signature.s),
+        v: signature.v.into(),
+    };
+
+    let mut signed_tx_bytes = tx.rlp_signed(&sig).to_vec();
+
+    hex_encode_0x(&signed_tx_bytes)
+}
+
+#[derive(CandidType, serde::Deserialize)]
+pub struct SignRequestEip1559 {
+    pub chain_id: Nat,
+    pub to: String,
+    pub gas: Nat,
     pub max_fee_per_gas: Nat,
     pub max_priority_fee_per_gas: Nat,
     pub value: Nat,
@@ -182,7 +241,7 @@ pub struct SignRequest {
 /// Computes a signature for an [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559) transaction.
 #[update]
 #[modifiers("only_owner")]
-async fn sign_transaction(req: SignRequest) -> String {
+async fn sign_eip1559_transaction(req: SignRequestEip1559) -> String {
     use ethers_core::types::transaction::eip1559::Eip1559TransactionRequest;
     use ethers_core::types::Signature;
 

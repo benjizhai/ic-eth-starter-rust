@@ -55,6 +55,15 @@ type SignRequest = record {
   to : text;
   gas : nat;
   value : nat;
+  data : opt text;
+  chain_id : nat;
+  nonce : nat;
+  gas_price : nat;
+};
+type SignRequestEip1559 = record {
+  to : text;
+  gas : nat;
+  value : nat;
   max_priority_fee_per_gas : nat;
   data : opt text;
   max_fee_per_gas : nat;
@@ -68,8 +77,9 @@ service : {
   get_tecdsa_signer_address_hex : () -> (text) query;
   personal_sign : (text) -> (text);
   set_canister_config : (CanisterConfig) -> (Result);
+  sign_eip1559_transaction : (SignRequestEip1559) -> (text);
+  sign_legacy_transaction : (SignRequest) -> (text);
   sign_prehash : (text) -> (text);
-  sign_transaction : (SignRequest) -> (text);
   update_canister_state : () -> (Result);
   view_debug_log : (LogView) -> (vec text) query;
 }
