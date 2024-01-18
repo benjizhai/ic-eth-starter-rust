@@ -233,13 +233,14 @@ async fn sign_transaction(req: SignRequest) -> String {
     hex_encode_0x(&signed_tx_bytes)
 }
 
-/// Computes a signature for a hex-encoded message according to [EIP-191](https://eips.ethereum.org/EIPS/eip-191).
+/// Computes a signature for a plaintext message according to [EIP-191](https://eips.ethereum.org/EIPS/eip-191).
 #[update]
 #[modifiers("only_owner")]
 async fn personal_sign(plaintext: String) -> String {
     let config = get_canister_config();
 
-    let bytes = hex_decode_0x(&plaintext).expect("hex decode error");
+    // let bytes = hex_decode_0x(&plaintext).expect("hex decode error");
+    let bytes = plaintext.as_bytes();
 
     let message = [
         b"\x19Ethereum Signed Message:\n",
